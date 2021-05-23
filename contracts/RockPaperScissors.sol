@@ -1,4 +1,4 @@
-//"SPDX-License-Identifier: <SPDX-License>"
+// SPDX-License-Identifier: MIT
 
 pragma solidity ^0.7.0;
 
@@ -47,11 +47,13 @@ contract RockPaperScissors {
     }
 
     /******************* ENUMS ************************/
+
     enum Option {none, Rock, Paper, Scissors}
     enum Mode {Challenged,Playing,DonePlaying}
 
     /******************* EVENTS ************************/
-    event RPS_Initialized(uint id);
+
+    event RPS_Initialized(uint id, address player0, address player1);
     event Played(uint id, address player, bytes32 commit);
     event Revealed(uint id, address player, Option option);
     event Replay(uint id);
@@ -78,7 +80,7 @@ contract RockPaperScissors {
         });
         gamesPlayed.push(id);
         isActive[id] = true;
-        emit RPS_Initialized(id);
+        emit RPS_Initialized(id, player0, player1);
         return id;
     }
     // allows players to replay a match
@@ -119,7 +121,6 @@ contract RockPaperScissors {
     function _win(uint id, address player) internal {
         uint amt = data[id].betAmt;
 
-        //betDeposit[player] -= amt;
         payOutAmt[player] += amt;
 
         won[id] = player;
@@ -130,8 +131,8 @@ contract RockPaperScissors {
         emit Winner(id, amt, player);
     }
 
-    // _publicMatch() - initializes match with constant bet amount
-    function _publicMatch() internal {
+    // _match() - initializes match with constant bet amount
+    function _match() internal {
         uint bet = MIN_DEPOSIT;
         if(payOutAmt[msg.sender] < bet) dai.transferFrom(msg.sender, address(this), (bet - payOutAmt[msg.sender])) ;
         require(bet <= payOutAmt[msg.sender]);
@@ -163,19 +164,18 @@ contract RockPaperScissors {
 
     /*************************** PUBLIC FUNCTIONS *********************/
 
-    // privateMatch allows msg.sender to initialize match and play against a certain player(oppponent) 
+    // customMatch allows msg.sender to initialize match and play against a certain player(oppponent) 
     // also allows msg.sender to set custom bet amount
     // 
-    function privateMatch(address _opponent, uint bet) public {
-        //uint xtraCash = msg.value;
+    function customMatch(address _opponent, uint bet) public {
         if(payOutAmt[msg.sender] < bet) dai.transferFrom(msg.sender, address(this), (bet - payOutAmt[msg.sender])) ;
         require(bet <= payOutAmt[msg.sender]);
         payOutAmt[msg.sender] -= bet;
-        //betDeposit[msg.sender] += bet; 
+         
         initRPS(msg.sender, _opponent, bet);
     }
 
-    // accept private match challenge
+    // accept custom match challenge
     function acceptPrivateChallenge(uint rps_id) public {
         require(data[rps_id].players[1] != address(0));
         _acceptRPS_Challenge(rps_id);
@@ -260,7 +260,7 @@ contract RockPaperScissors {
                 
             }
         }
-        (_j != 0) ? _acceptRPS_Challenge(_j) : _publicMatch();
+        (_j != 0) ? _acceptRPS_Challenge(_j) : _match();
         
 
     }
@@ -279,7 +279,7 @@ contract RockPaperScissors {
                 _win(id, player0);
             } else if(hasPlayed(id, player1) && !hasPlayed(id, player0)){
                 _win(id, player1);
-            }
+            } else { revert("No dispute");}
         } else if( d.mode == Mode.DonePlaying && d.reveal1_time + MAX_INTERVAL < block.timestamp){
             _gameLogic(id);
         } else {
@@ -292,6 +292,7 @@ contract RockPaperScissors {
     
 
     /*************************** VIEW FUNCTIONS *********************/
+
     function getCommit(uint id) public view onlyPlayers(id) returns(bytes32){
         return msg.sender == data[id].players[0] ? data[id].player0_commit : data[id].player1_commit;
     }
@@ -319,7 +320,14 @@ contract RockPaperScissors {
         return getPlayerIndex(id,addr) == 0 ? 1 : 0;
     }
 
+    /************************ HELPER FUNCTIONS ********************/
+
+    function generateCommitHash(Option _option, uint salt) public view returns(bytes32){
+        return keccak256(abi.encodePacked(_option, _salt));
+    }
+
     /*************************** MODIFIERS *********************/
+
     modifier onlyPlayers(uint id) {
         require(msg.sender == data[id].players[0] || msg.sender == data[id].players[0]);
         _;
