@@ -111,7 +111,7 @@ contract RockPaperScissors {
         }
 
     }
-    function getOtherPlayerIndex(uint id, address addr){
+    function getOtherPlayerIndex(uint id, address addr) public view{
         getPlayerIndex(id,addr) == 0 ? 1 : 0;
     }
 
@@ -199,7 +199,7 @@ contract RockPaperScissors {
 
     }
 
-    function declareWinner(uint id){
+    function declareWinner(uint id) public {
         GameData memory d = data[rps_id];
         (address player0, address player1) = (d.players[0], d.players[1]);
         require(hasRevealed(id, player0) && hasRevealed(id, player1));
@@ -229,7 +229,7 @@ contract RockPaperScissors {
         return won[rps_id];
     }
 
-    function claim(){
+    function claim() public {
         uint amt = payOutAmt[msg.sender];
         dai.safeTransferFrom(address(this), msg.sender, amt);
         payOutAmt[msg.sender] = 0;
@@ -241,7 +241,7 @@ contract RockPaperScissors {
     }
     //mod
 
-    function matchnroll(){
+    function matchnroll() public {
         uint[] memory g;
         for(uint i = 0; i <= gamesPlayed.length; i++ ){
             uint j = gamesPlayed[i];
@@ -255,7 +255,7 @@ contract RockPaperScissors {
 
     }
 
-    function settleDispute(uint id){
+    function settleDispute(uint id) public {
         GameData memory d = data[id];
         (address player0 , address player1) = (d.players[0], d.players[1]);        
         if(d.mode == Mode.Challenged && d.initTime + MAX_INTERVAL < block.timestamp){
