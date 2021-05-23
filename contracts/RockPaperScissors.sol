@@ -57,6 +57,14 @@ contract RockPaperScissors {
     // constructor(address token){
 
     // }
+    event RPS_Initialized(uint id);
+    event Played(uint id, address player, bytes32 commit);
+    event Revealed(uint id, address player, Option option);
+    event Replay(uint id);
+    event ChallengeAccepted(uint id, address player);
+    event Winner(uint id, uint amt, address player);
+    event Claimed(uint amt, address player);
+
 
     function initRPS(address player0, address player1, uint bet) internal returns(uint){
         uint id = rps_gameID++; 
@@ -75,6 +83,7 @@ contract RockPaperScissors {
         });
         gamesPlayed.push(id);
         isActive[id] = true;
+        emit RPS_Initialized(id);
         return id;
     }
     function privateMatch(address _opponent, uint bet) public {
@@ -108,6 +117,8 @@ contract RockPaperScissors {
 
         if(d.players[1] == address(0)) d.players[1] = msg.sender;
         d.mode = Mode.Playing;
+
+        emit ChallengeAccepted(rps_id, msg.sender);
     }
 
     function getPlayerIndex(uint id, address addr) public view returns(uint){
@@ -141,6 +152,7 @@ contract RockPaperScissors {
         if(!hasPlayed(id, otherPlayer)) d.move1_time = block.timestamp;
         if(hasPlayed(id, otherPlayer)) d.mode = Mode.DonePlaying;
         
+        emit Played(id, msg.sender, _rpsCommitHash);
     }
 
     function hasPlayed(uint id, address addr) public view returns(bool){
@@ -160,6 +172,7 @@ contract RockPaperScissors {
         d.move1_time = 0;
         d.reveal1_time = 0;
 
+        emit Replay(id);
     }
 
     function getCommit(uint id) public view onlyPlayers(id) returns(bytes32){
@@ -174,7 +187,7 @@ contract RockPaperScissors {
     function reveal(uint rps_id, Option _option, uint _salt) public onlyPlayers(rps_id){
         require(data[rps_id].mode == Mode.DonePlaying);
         require(keccak256(abi.encodePacked(_option, _salt)) == getCommit(rps_id), "hash does not match");
-        require(_option != Option.none);
+        require(_option == Option.Rock || _option == Option.Paper || _option == Option.Scissors);
         if(msg.sender == data[rps_id].players[0]){ 
             data[rps_id].playersChoice[0] = _option;
         }else {
@@ -183,6 +196,8 @@ contract RockPaperScissors {
 
         // first reveal time is set by any player who successfully calls this function first
         if (data[rps_id].reveal1_time == 0) data[rps_id].reveal1_time = block.timestamp;
+
+        emit Revealed(rps_id, msg.sender, _option);
     }
 
 
@@ -227,6 +242,8 @@ contract RockPaperScissors {
         isActive[id] = false;
         
         delete data[id];
+
+        emit Winner(id, amt, player);
     }
 
     function getWinner(uint rps_id) public view returns(address){
@@ -237,6 +254,8 @@ contract RockPaperScissors {
         uint amt = payOutAmt[msg.sender];
         dai.transferFrom(address(this), msg.sender, amt);
         payOutAmt[msg.sender] = 0;
+
+        emit Claimed(amt, msg.sender);
     }
 
     modifier onlyPlayers(uint id) {
@@ -271,8 +290,6 @@ contract RockPaperScissors {
                 _win(id, player0);
             } else if(hasPlayed(id, player1) && !hasPlayed(id, player0)){
                 _win(id, player1);
-            } else {
-                revert("No dispute");
             }
         } else if( d.mode == Mode.DonePlaying && d.reveal1_time + MAX_INTERVAL < block.timestamp){
             _gameLogic(id);
