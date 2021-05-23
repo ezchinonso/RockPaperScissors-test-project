@@ -1,3 +1,5 @@
+//"SPDX-License-Identifier: <SPDX-License>"
+
 pragma solidity ^0.7.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -10,7 +12,7 @@ contract RockPaperScissors {
     uint constant MAX_INTERVAL = 15 minutes;
     uint constant MIN_DEPOSIT  = 10; //dai
 
-    IERC20 dai = IERC20(0x95b58a6bff3d14b7db2f5cb5f0ad413dc2940658);
+    IERC20 dai = IERC20(0x95b58a6Bff3D14B7DB2f5cb5F0Ad413DC2940658);
 
     enum Mode {Challenged,Playing,DonePlaying}
 
@@ -56,14 +58,14 @@ contract RockPaperScissors {
 
     // }
 
-    function initRPS(address player0, address player1, uint bet) internal payable returns(uint){
+    function initRPS(address player0, address player1, uint bet) internal returns(uint){
         uint id = rps_gameID++; 
         data[id] = GameData({
             players: [player0, player1],
             mode: Mode.Challenged,
             player0_commit: "",
             player1_commit: "",
-            playersChoice: [Mode.none, Mode.none],
+            playersChoice: [Option.none, Option.none],
             initTime: block.timestamp,
             move1_time: 0,
             reveal1_time: 0,
@@ -77,7 +79,7 @@ contract RockPaperScissors {
     }
     function privateMatch(address _opponent, uint bet) public {
         //uint xtraCash = msg.value;
-        if(payOutAmt[msg.sender] < bet) dai.safeTransferFrom(msg.sender, address(this), (bet - payOutAmt[msg.sender])) ;
+        if(payOutAmt[msg.sender] < bet) dai.transferFrom(msg.sender, address(this), (bet - payOutAmt[msg.sender])) ;
         require(bet <= payOutAmt[msg.sender]);
         payOutAmt[msg.sender] -= bet;
         //betDeposit[msg.sender] += bet; 
@@ -85,7 +87,7 @@ contract RockPaperScissors {
     }
     function publicMatch() public {
         uint bet = MIN_DEPOSIT;
-        if(payOutAmt[msg.sender] < bet) dai.safeTransferFrom(msg.sender, address(this), (bet - payOutAmt[msg.sender])) ;
+        if(payOutAmt[msg.sender] < bet) dai.transferFrom(msg.sender, address(this), (bet - payOutAmt[msg.sender])) ;
         require(bet <= payOutAmt[msg.sender]);
         payOutAmt[msg.sender] -= bet;
         //betDeposit[msg.sender] += bet; 
@@ -98,7 +100,7 @@ contract RockPaperScissors {
         require(d.mode == Mode.Challenged);
 
         uint bet = d.betAmt;
-        if(payOutAmt[msg.sender] < bet) dai.safeTransferFrom(msg.sender, address(this), (bet - payOutAmt[msg.sender])) ;
+        if(payOutAmt[msg.sender] < bet) dai.transferFrom(msg.sender, address(this), (bet - payOutAmt[msg.sender])) ;
         require(bet <= payOutAmt[msg.sender]);
         payOutAmt[msg.sender] -= bet;
         //betDeposit[msg.sender] += bet; 
@@ -109,16 +111,16 @@ contract RockPaperScissors {
     }
 
     function getPlayerIndex(uint id, address addr) public view returns(uint){
-        for(uint i = 0; i < data[id].length; i++){
+        for(uint i = 0; i < data[id].players.length; i++){
             if (data[id].players[i] == addr) return i;
         }
 
     }
-    function getOtherPlayerIndex(uint id, address addr) public view{
-        getPlayerIndex(id,addr) == 0 ? 1 : 0;
+    function getOtherPlayerIndex(uint id, address addr) public view returns(uint){
+        return getPlayerIndex(id,addr) == 0 ? 1 : 0;
     }
 
-    function play(uint id, bytes32 calldata _rpsCommitHash) public onlyPlayers(id){
+    function play(uint id, bytes32 _rpsCommitHash) public onlyPlayers(id){
         require(_rpsCommitHash != "", "Empty Data");
         GameData storage d = data[id];
         require(d.mode == Mode.Playing);
@@ -152,9 +154,9 @@ contract RockPaperScissors {
         GameData storage d = data[id];
         require(d.mode == Mode.DonePlaying);
         d.mode = Mode.Playing;
-        d.player2_commit = "";
+        d.player0_commit = "";
         d.player1_commit = "";
-        d.playersChoice = [Mode.none, Mode.none];
+        d.playersChoice = [Option.none, Option.none];
         d.move1_time = 0;
         d.reveal1_time = 0;
 
@@ -166,13 +168,13 @@ contract RockPaperScissors {
         // } else { 
         //     return data[id].player1_commit;
         // } 
-        msg.sender == data[id].players[0] ? data[id].player0_commit : data[id].player1_commit;
+        return msg.sender == data[id].players[0] ? data[id].player0_commit : data[id].player1_commit;
     }
 
     function reveal(uint rps_id, Option _option, uint _salt) public onlyPlayers(rps_id){
         require(data[rps_id].mode == Mode.DonePlaying);
         require(keccak256(abi.encodePacked(_option, _salt)) == getCommit(rps_id), "hash does not match");
-        require(_option != Mode.none);
+        require(_option != Option.none);
         if(msg.sender == data[rps_id].players[0]){ 
             data[rps_id].playersChoice[0] = _option;
         }else {
@@ -180,39 +182,38 @@ contract RockPaperScissors {
         }
 
         // first reveal time is set by any player who successfully calls this function first
-        if (data[id].reveal1_time == 0) data[id].reveal1_time = block.timestamp;
+        if (data[rps_id].reveal1_time == 0) data[rps_id].reveal1_time = block.timestamp;
     }
 
 
     function _gameLogic(uint rps_id) internal {
-    
         GameData memory d = data[rps_id];
-        (address player0, address player1) = (d.players[0], d.players[1]);
+        (address player0, address player1) = (data[rps_id].players[0], data[rps_id].players[1]);
 
-         d.playersChoice[0] == d.playersChoice[1] ? _allowReplay()
-         : d.playersChoice[0] == Option[1] && d.playersChoice[1] != Option[1] ? _win(rps_id, player1)
-         : d.playersChoice[0] != Option[1] && d.playersChoice[1] == Option[1] ? _win(rps_id, player0)
-         : d.playersChoice[0] == Option[2] && d.playersChoice[1] == Option[3] ? _win(rps_id, player1)
-         : d.playersChoice[0] == Option[2] && d.playersChoice[1] == Option[4] ? _win(rps_id, player0)
-         : d.playersChoice[0] == Option[3] && d.playersChoice[1] == Option[2] ? _win(rps_id, player0)
-         : d.playersChoice[0] == Option[3] && d.playersChoice[1] == Option[4] ? _win(rps_id, player1)
-         : d.playersChoice[0] == Option[4] && d.playersChoice[1] == Option[3] ? _win(rps_id, player0)
-         : d.playersChoice[0] == Option[4] && d.playersChoice[1] == Option[2] ? _win(rps_id, player1)
+         uint(d.playersChoice[0]) == uint(d.playersChoice[1]) ? _allowReplay(rps_id) 
+         : uint(d.playersChoice[0]) == 1 && uint(d.playersChoice[1]) != 1 ? _win(rps_id, player1) 
+         : uint(d.playersChoice[0]) != 1 && uint(d.playersChoice[1]) == 1 ? _win(rps_id, player0) 
+         : uint(d.playersChoice[0]) == 2 && uint(d.playersChoice[1]) == 3 ? _win(rps_id, player1) 
+         : uint(d.playersChoice[0]) == 2 && uint(d.playersChoice[1]) == 4 ? _win(rps_id, player0) 
+         : uint(d.playersChoice[0]) == 3 && uint(d.playersChoice[1]) == 2 ? _win(rps_id, player0) 
+         : uint(d.playersChoice[0]) == 3 && uint(d.playersChoice[1]) == 4 ? _win(rps_id, player1) 
+         : uint(d.playersChoice[0]) == 4 && uint(d.playersChoice[1]) == 3 ? _win(rps_id, player0) 
+         : uint(d.playersChoice[0]) == 4 && uint(d.playersChoice[1]) == 2 ? _win(rps_id, player1) 
          : revert("invalid logic");
 
     }
 
     function declareWinner(uint id) public {
-        GameData memory d = data[rps_id];
+        GameData memory d = data[id];
         (address player0, address player1) = (d.players[0], d.players[1]);
         require(hasRevealed(id, player0) && hasRevealed(id, player1));
         _gameLogic(id);
     }
 
     function hasRevealed(uint id, address addr) public view returns(bool){
-        data[id].players[0] == addr && data[id].playersChoice[0] != Option[1] ? true
-        : data[id].players[0] == addr && data[id].playersChoice[0] == Option[1] ? false
-        : data[id].players[1] == addr && data[id].playersChoice[1] != Option[1] ? true
+        data[id].players[0] == addr && uint(data[id].playersChoice[0]) != 1 ? true
+        : data[id].players[0] == addr && uint(data[id].playersChoice[0]) == 1 ? false
+        : data[id].players[1] == addr && uint(data[id].playersChoice[1]) != 1 ? true
         : false;
     }
 
@@ -234,7 +235,7 @@ contract RockPaperScissors {
 
     function claim() public {
         uint amt = payOutAmt[msg.sender];
-        dai.safeTransferFrom(address(this), msg.sender, amt);
+        dai.transferFrom(address(this), msg.sender, amt);
         payOutAmt[msg.sender] = 0;
     }
 
@@ -245,15 +246,17 @@ contract RockPaperScissors {
     //mod
 
     function matchnroll() public {
-        uint[] memory g;
+        //uint[] g;
+        uint _j;
         for(uint i = 0; i <= gamesPlayed.length; i++ ){
             uint j = gamesPlayed[i];
-            if(isActive(j) && data[j].players[1] == address(0)){
-                g.push(j);
+            if(isActive[j] && data[j].players[1] == address(0)){
+                //g.push(j);
+                _j = j;
+                
             }
         }
-        (g.length >= 1) ? acceptRPS_Challenge(g[0]) 
-        : publicMatch();
+        (_j != 0) ? acceptRPS_Challenge(_j) : publicMatch();
         
 
     }
