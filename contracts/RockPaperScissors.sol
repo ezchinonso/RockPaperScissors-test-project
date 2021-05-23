@@ -1,13 +1,16 @@
-pragma solidity ^0.7.3;
+pragma solidity ^0.7.0;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract RockPaperScissors {
 
     mapping(uint => GameData) data;
 
     uint256 rps_gameID = 0;
 
-    uint MAX_INTERVAL = 15 minutes;
-    uint MIN_DEPOSIT  = 10; //dai
+    uint constant MAX_INTERVAL = 15 minutes;
+    uint constant MIN_DEPOSIT  = 10; //dai
+
+    IERC20 dai = IERC20(0x95b58a6bff3d14b7db2f5cb5f0ad413dc2940658);
 
     enum Mode {Challenged,Playing,DonePlaying}
 
