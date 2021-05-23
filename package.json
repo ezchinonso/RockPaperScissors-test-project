@@ -1,0 +1,23 @@
+{
+  "name": "rockpaperscissors-test-project",
+  "version": "1.0.0",
+  "description": "You will create a smart contract named `RockPaperScissors` whereby:   Alice and Bob can play the classic game of rock, paper, scissors using ERC20 (of your choosing).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/slingshot-finance/RockPaperScissors-test-project.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/slingshot-finance/RockPaperScissors-test-project/issues"
+  },
+  "homepage": "https://github.com/slingshot-finance/RockPaperScissors-test-project#readme",
+  "devDependencies": {
+    "hardhat": "^2.3.0"
+  }
+}
