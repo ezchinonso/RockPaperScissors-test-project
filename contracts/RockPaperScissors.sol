@@ -240,6 +240,7 @@ contract RockPaperScissors {
 
         // first reveal time is set by any player who successfully calls this function first
         if (data[rps_id].reveal1_time == 0) data[rps_id].reveal1_time = block.timestamp;
+        hasRevealed[rps_id][msg.sender] = true;
 
         emit Revealed(rps_id, msg.sender, _option);
     }

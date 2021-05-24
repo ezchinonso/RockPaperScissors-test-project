@@ -32,7 +32,7 @@ describe("RockpaperScissors", function() {
     await fDai.transferFrom(owner.address, player0.address, 50)
     await fDai.transferFrom(owner.address, player1.address, 50)
     
-    
+
 
     
   });    
@@ -41,12 +41,12 @@ describe("RockpaperScissors", function() {
     await fDai.connect(player0).approve(rps.address, 1000);
     await rps.connect(player0).matchnroll();
     id = await rps.getPlayerIndex(1, player0.address);
-    console.log(`player's index is ${id.toNumber()}`)
+    console.log(`player0 index is ${id.toNumber()}`)
     await expect(id).to.be.equal(0)
     await fDai.connect(player1).approve(rps.address, 1000);
     await rps.connect(player1).matchnroll();
     id = await rps.getPlayerIndex(1, player1.address);
-    console.log(`player's index is ${id.toNumber()}`)
+    console.log(`player1 index is ${id.toNumber()}`)
     await expect(id).to.be.equal(1)
     
   });
@@ -172,8 +172,50 @@ describe("RockpaperScissors", function() {
     await expect(player1Bal.toNumber()).to.be.eql(0);
 
   });
-  it("emit correct events", async function(){
-    pass;
+  it("Should declare correct winner", async function(){
+    let player0Bal;
+    let player1Bal;
+    let player0CH = 1;
+    let player1CH = 2;
+    let player0salt = ethers.utils.parseUnits((Math.random() * 100).toString());
+    let player1salt = ethers.utils.parseUnits((Math.random() * 100).toString());
+    let byt;
+    const id=1;
+    await fDai.connect(player0).approve(rps.address, 1000);
+    await rps.connect(player0).matchnroll();
+
+    await fDai.connect(player1).approve(rps.address, 1000);
+    await rps.connect(player1).matchnroll();
+
+
+    player0Bal = await rps.getPlayerBalance(player0.address);
+    console.log(`Balance of player0 before match = ${player0Bal}\n`)
+
+    player1Bal = await rps.getPlayerBalance(player1.address);
+    console.log(`Balance of player1 before match = ${player1Bal}\n`)
+
+    // player1 generates hash using helper function and plays
+    byt = await rps.generateCommitHash(player0CH, player0salt);
+    await rps.connect(player0).play(id, byt);
+
+    //player2 generates hash using helper function and plays
+    byt = await rps.generateCommitHash(player1CH, player1salt);
+    await rps.connect(player1).play(id, byt);
+
+    await rps.connect(player0).reveal(id, player0CH, player0salt);
+    await rps.connect(player1).reveal(id, player1CH, player1salt);
+
+    await rps.declareWinner(id);
+    player0Bal = await rps.getPlayerBalance(player0.address);
+    console.log(`Balance of player0 after match = ${player0Bal}\n`)
+    player1Bal = await rps.getPlayerBalance(player1.address);
+    console.log(`Balance of player1 after match = ${player1Bal}\n`)
+    await expect(await rps.getWinner(id)).to.be.eql(player1.address)
+    await expect(player0Bal.toNumber()).to.be.eql(0);
+    await expect(player1Bal.toNumber()).to.be.eql(20);
+  })
+  it("Emit correct events", async function(){
+    // TODO
   })
 });
 
