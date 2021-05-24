@@ -218,7 +218,3 @@ describe("RockpaperScissors", function() {
     // TODO
   })
 });
-
-// const amt1 = await fDai.balanceOf(player0.address);
-//     const amt2 = await fDai.balanceOf(player1.address);
-//     console.log(` \n Balance of player0 before test = ${amt1} \n Balance of player1 before test= ${amt2} `)
