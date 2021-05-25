@@ -29,6 +29,7 @@ contract RockPaperScissors {
     // all rps matches played
     uint[] gamesPlayed;
 
+    // temp. store active games data;
     uint[] cache;
 
     mapping(address => uint) payOutAmt;
@@ -173,6 +174,7 @@ contract RockPaperScissors {
 
     /*************************** PUBLIC FUNCTIONS *********************/
 
+    // deposit dai to this address and increases msg.sender balance
     function deposit(uint amt) public {
         dai.approve(address(this), uint(-1));
         dai.transferFrom(msg.sender, address(this), amt);
@@ -196,7 +198,7 @@ contract RockPaperScissors {
         _acceptRPS_Challenge(rps_id);
     }
     
-    // 
+    // commit hashed move
     function play(uint id, bytes32 _rpsCommitHash) public onlyPlayers(id){
         GameData storage d = data[id];
         require(d.mode == Mode.Playing, "not in this mode");
