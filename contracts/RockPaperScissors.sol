@@ -53,6 +53,8 @@ contract RockPaperScissors {
         uint move1_time;
         // timestamp for first reveal
         uint reveal1_time;
+        // bool - true if data exists else false
+        // bool exists;
     }
 
     /******************* ENUMS ************************/
@@ -129,6 +131,7 @@ contract RockPaperScissors {
     // deletes GameData for match
     // emits winner event
     function _win(uint id, address player) internal {
+        require(isActive[id] == true, "Match has either finished or hasn't started");
         uint amt = data[id].betAmt;
 
         payOutAmt[player] += amt;
